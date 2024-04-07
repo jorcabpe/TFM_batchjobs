@@ -1,0 +1,6 @@
+apiVersion: batch.upv.es/v1
+kind: Queue
+metadata:
+  name: high-priority-queue
+spec:
+  slots: 10
