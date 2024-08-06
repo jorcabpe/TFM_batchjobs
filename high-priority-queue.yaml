@@ -3,4 +3,6 @@ kind: Queue
 metadata:
   name: high-priority-queue
 spec:
-  slots: 10
+  priority: 10
+status: {}
+  

@@ -29,20 +29,11 @@ spec:
             status:
               type: object
               properties:
-                activeJobs:
+                runningJobs:
                   type: integer
-                waitingJobs:
+                queuedJobs:
                   type: integer
-    additionalPrinterColumns:
-        - name: Priority
-          type: integer
-          jsonPath: .spec.priority
-        - name: Slots
-          type: integer
-          jsonPath: .spec.slots
-        - name: ActiveJobs
-          type: integer
-          jsonPath: .status.activeJobs
-        - name: WaitingJobs
-          type: integer
-          jsonPath: .status.waitingJobs
+                jobs:
+                  type: array
+                  items: 
+                    type: string

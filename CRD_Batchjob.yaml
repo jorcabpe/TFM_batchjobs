@@ -4,14 +4,6 @@ metadata:
   name: batchjobs.batch.upv.es
 spec:
   group: batch.upv.es
-  names:
-    kind: BatchJob
-    listKind: BatchJobList
-    plural: batchjobs
-    singular: batchjob
-    shortNames:
-      - bjob
-  scope: Namespaced
   versions:
     - name: v1
       served: true
@@ -27,8 +19,6 @@ spec:
                   type: string
                 priority:
                   type: integer
-                slots:
-                  type: integer
                 jobDetails:
                   type: object
                   properties:
@@ -38,17 +28,10 @@ spec:
                       type: array
                       items:
                         type: string
-            status:
-              type: object
-              properties:
-                phase:
-                  type: string
-                message:
-                  type: string
-      additionalPrinterColumns:
-        - name: phase
-          type: string
-          jsonPath: .status.phase
-        - name: message
-          type: string
-          jsonPath: .status.message
+  scope: Namespaced
+  names:
+    plural: batchjobs
+    singular: batchjob
+    kind: BatchJob
+    shortNames:
+    - bj
