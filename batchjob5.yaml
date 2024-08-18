@@ -1,0 +1,13 @@
+apiVersion: batch.upv.es/v1
+kind: BatchJob
+metadata:
+  name: job5
+spec:
+  queueName: high-priority-queue
+  priority: 6
+  jobDetails:
+    image: ubuntu:20.04
+    commands:
+      - "echo 'Job5: Hello, World!'"
+      - "sleep 100"
+      - "echo 'Job5: Job Completed'"
