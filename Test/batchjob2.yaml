@@ -1,0 +1,18 @@
+apiVersion: batch.upv.es/v1
+kind: BatchJob
+metadata:
+  name: job2
+spec:
+  queueName: high-priority-queue
+  priority: 5
+  jobDetails:
+    image: jorcabpe/mtlinpack-image:latest
+    commands:
+      - "/usr/src/mtlinpack.ex2 out.txt 20000"
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "0.5"
+      limits:
+        memory: "512Mi"
+        cpu: "1"

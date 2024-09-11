@@ -49,12 +49,13 @@ def update_queue_status(queue_name, queue_status):
         )
 
 
-def create_pod(job_name, queue_name, image_name, commands):
+def create_pod(job_name, queue_name, image_name, commands, resources):
     labels = {
         "batchjob": job_name,
         "queue": queue_name
     }
 
+    v1 = client.CoreV1Api()
     pod_name = f'pod{job_name}'
     pod = client.V1Pod(
         metadata=client.V1ObjectMeta(name=pod_name, labels=labels),
@@ -63,14 +64,17 @@ def create_pod(job_name, queue_name, image_name, commands):
                 client.V1Container(
                     name=job_name,
                     image=image_name,
-                    command=["/bin/sh", "-c", " && ".join(commands)]
+                    command=["/bin/sh", "-c", " && ".join(commands)],
+                    resources=client.V1ResourceRequirements(
+                        requests=resources.get('requests', {}),
+                        limits=resources.get('limits', {})
+                    )
                 )
             ],
             restart_policy="Never"
         )
     )
 
-    v1 = client.CoreV1Api()
     v1.create_namespaced_pod(namespace=NAMESPACE, body=pod)
 
 
@@ -126,18 +130,12 @@ def monitor_pod_status(name, labels, status, **kwargs):
         job_name = labels['batchjob']
         queue = get_custom_object(QUEUE_PLURAL, queue_name)
 
-        if not queue:
-            logging.error(
-                f"""Queue {queue_name} not found in
-                namespace {NAMESPACE}."""
-            )
-            return
-
         queue_status = queue.get('status', {})
         queue_status['runningJobs'] = [
             job
             for job in queue_status.get('runningJobs', [])
-            if job != job_name
+            if job != job_name and
+            job not in queue_status['queuedJobs']
         ]
 
         update_queue_status(queue_name, {'status': queue_status})
@@ -170,7 +168,6 @@ def monitor_pod_status(name, labels, status, **kwargs):
             )
             return
 
-        logging.info(f'Updating already finalized pod {name}')
         logging.info(f"queuedJobs: {queue_status['queuedJobs']}")
         logging.info(f"runningJobs: {queue_status['runningJobs']}")
 
@@ -204,30 +201,34 @@ def create_batchjob(spec, name, namespace, **kwargs):
 def delete_batchjob(spec, name, namespace, **kwargs):
     queue_name = spec.get('queueName')
 
-    if not queue_name:
-        logging.error(
-            f"""BatchJob {name} does not have
-            a queueName specified."""
-        )
-        return
-
     queue = get_custom_object(QUEUE_PLURAL, queue_name)
-
-    if not queue:
-        logging.error(
-            f"""Queue {queue_name} not found in
-            namespace {namespace}."""
-        )
-        return
 
     queue_status = queue.get('status', {})
     queue_status['queuedJobs'] = [
         job
         for job in queue_status.get('queuedJobs', [])
-        if job != name
+        if job != name and
+        job not in queue_status['runningJobs']
     ]
 
     update_queue_status(queue_name, {'status': queue_status})
+
+    try:
+        api.delete_namespaced_custom_object(
+            group=GROUP,
+            version=VERSION,
+            namespace=NAMESPACE,
+            plural=JOB_PLURAL,
+            name=name,
+            body={},
+        )
+    except ApiException as e:
+        logging.error(
+            f"""Exception when calling
+            CustomObjectsApi->delete_namespaced_custom_object: {e}
+            """
+        )
+        return
 
     logging.info(f"BatchJob {name} removed from queue {queue_name}")
 
@@ -241,6 +242,28 @@ def create_queue(spec, name, namespace, **kwargs):
     }
     update_queue_status(name, {'status': queue_status})
     logging.info(f"Queue {name} created")
+
+
+@kopf.on.delete(GROUP, VERSION, QUEUE_PLURAL)
+def delete_queue(name, namespace, **kwargs):
+    try:
+        api.delete_namespaced_custom_object(
+            group=GROUP,
+            version=VERSION,
+            namespace=NAMESPACE,
+            plural=QUEUE_PLURAL,
+            name=name,
+            body={},
+        )
+    except ApiException as e:
+        logging.error(
+            f"""Exception when calling
+            CustomObjectsApi->delete_namespaced_custom_object: {e}
+            """
+        )
+        return
+
+    logging.info(f"Queue {name} removed")
 
 
 @kopf.timer(GROUP, VERSION, QUEUE_PLURAL, interval=60)
@@ -264,20 +287,22 @@ def scheduling(spec, namespace, **kwargs):
             )
         ):
             job_name = queue_status['queuedJobs'].pop(0)
+            queue_status['runningJobs'] += [job_name]
             queue_status['queuedJobs'] = [
                 job
                 for job in queue_status.get('queuedJobs', [])
-                if job != job_name
+                if job != job_name and
+                job not in queue_status['runningJobs']
             ]
-            queue_status['runningJobs'] += [job_name]
 
             batchjob = get_custom_object(JOB_PLURAL, job_name)
 
             job_spec = batchjob['spec']['jobDetails']
             image = job_spec['image']
             commands = job_spec['commands']
+            resources = job_spec['resources']
 
-            create_pod(job_name, queue_name, image, commands)
+            create_pod(job_name, queue_name, image, commands, resources)
 
             update_queue_status(queue_name, {'status': queue_status})
 
