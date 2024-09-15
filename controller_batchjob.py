@@ -108,7 +108,7 @@ def prioritize_batchjobs_of_a_queue(queue):
         if job['metadata']['name']
         not in queue_status['runningJobs']
     ]
-        
+
     update_queue_status(queue_name, {'status': queue_status})
 
 
@@ -187,7 +187,9 @@ async def create_batchjob(spec, name, namespace, **kwargs):
         queue_name = spec.get('queueName')
 
         if not queue_name:
-            logging.error(f"BatchJob {name} does not have a queueName specified.")
+            logging.error(
+                f"BatchJob {name} does not have a queueName specified."
+            )
             return
         queue = get_custom_object(QUEUE_PLURAL, queue_name)
 
@@ -199,7 +201,9 @@ async def create_batchjob(spec, name, namespace, **kwargs):
             return
 
         queue_status = queue.get('status', {})
-        queue_status['queuedJobs'] = queue_status.get('queuedJobs', []) + [name]
+        queue_status['queuedJobs'] = queue_status.get(
+            'queuedJobs', []
+        ) + [name]
         update_queue_status(queue_name, {'status': queue_status})
 
         logging.info(f"BatchJob {name} added to queue {queue_name}")
@@ -241,7 +245,7 @@ async def delete_batchjob(spec, name, namespace, **kwargs):
             )
             return
 
-        logging.info(f"BatchJob {name} removed from queue {queue_name}")    
+        logging.info(f"BatchJob {name} removed from queue {queue_name}")
 
 
 @kopf.on.create(GROUP, VERSION, QUEUE_PLURAL)
