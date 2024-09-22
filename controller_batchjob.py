@@ -17,7 +17,11 @@ QUEUE_PLURAL = "queues"
 JOB_PLURAL = "batchjobs"
 NAMESPACE = 'default'
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(format='[%(asctime)s] - %(message)s', level=logging.INFO)
+
+# Configura el logger de Kopf para desactivar los logs de nivel INFO
+kopf_logger = logging.getLogger('kopf.objects')
+kopf_logger.setLevel(logging.WARNING)  # Muestra solo WARNING o más alto, omite INFO y DEBUG
 
 kubernetes.config.load_kube_config()
 api = CustomObjectsApi()
@@ -127,7 +131,7 @@ def get_custom_object(object_plural, object_name):
         return
 
 
-@kopf.timer(VERSION, 'pods', interval=30)
+@kopf.timer(VERSION, 'pods', interval=1)
 async def monitor_pod_status(name, labels, status, **kwargs):
     async with event_lock:
         phase = status.get('phase')
@@ -175,10 +179,10 @@ async def monitor_pod_status(name, labels, status, **kwargs):
                 )
                 return
 
-            logging.info(f"Removing Pod: {name}")
-            logging.info(f"Removing Job: {job_name}")
-            logging.info(f"queuedJobs: {queue_status['queuedJobs']}")
-            logging.info(f"runningJobs: {queue_status['runningJobs']}")
+            logging.info(f"[REMOVING] - Removing Pod: {name}")
+            # logging.info(f"[REMOVING] - Removing Job: {job_name}\n")
+            #logging.info(f"queuedJobs: {queue_status['queuedJobs']}")
+            #logging.info(f"runningJobs: {queue_status['runningJobs']}")
 
 
 @kopf.on.create(GROUP, VERSION, JOB_PLURAL)
@@ -206,9 +210,9 @@ async def create_batchjob(spec, name, namespace, **kwargs):
         ) + [name]
         update_queue_status(queue_name, {'status': queue_status})
 
-        logging.info(f"BatchJob {name} added to queue {queue_name}")
-        logging.info(f"queuedJobs: {queue_status['queuedJobs']}")
-        logging.info(f"runningJobs: {queue_status['runningJobs']}")
+        logging.info(f"[ADDING JOB TO QUEUE] - BatchJob {name} added to queue {queue_name}\n")
+        #logging.info(f"queuedJobs: {queue_status['queuedJobs']}")
+        #logging.info(f"runningJobs: {queue_status['runningJobs']}")
 
 
 @kopf.on.delete(GROUP, VERSION, JOB_PLURAL)
@@ -245,7 +249,7 @@ async def delete_batchjob(spec, name, namespace, **kwargs):
             )
             return
 
-        logging.info(f"BatchJob {name} removed from queue {queue_name}")
+        logging.info(f"[REMOVING] - BatchJob {name} removed from queue {queue_name}\n")
 
 
 @kopf.on.create(GROUP, VERSION, QUEUE_PLURAL)
@@ -256,7 +260,7 @@ async def create_queue(spec, name, namespace, **kwargs):
             'queuedJobs': []
         }
         update_queue_status(name, {'status': queue_status})
-        logging.info(f"Queue {name} created")
+        logging.info(f"Queue {name} created\n")
 
 
 @kopf.on.delete(GROUP, VERSION, QUEUE_PLURAL)
@@ -279,10 +283,10 @@ async def delete_queue(name, namespace, **kwargs):
             )
             return
 
-        logging.info(f"Queue {name} removed")
+        logging.info(f"Queue {name} removed\n")
 
 
-@kopf.timer(GROUP, VERSION, QUEUE_PLURAL, interval=60)
+@kopf.timer(GROUP, VERSION, QUEUE_PLURAL, interval=30)
 async def scheduling(spec, namespace, **kwargs):
     async with event_lock:
         list_queues = get_list_queues()
@@ -324,11 +328,10 @@ async def scheduling(spec, namespace, **kwargs):
                 update_queue_status(queue_name, {'status': queue_status})
 
                 logging.info(
-                    f"""Starting BatchJob {job_name}
-                    from queue {queue_name}"""
+                    f"""[SCHEDULING] - Starting BatchJob {job_name} from queue {queue_name}\n"""
                 )
-                logging.info(f"queuedJobs: {queue_status['queuedJobs']}")
-                logging.info(f"runningJobs: {queue_status['runningJobs']}")
+                #logging.info(f"queuedJobs: {queue_status['queuedJobs']}")
+                #logging.info(f"runningJobs: {queue_status['runningJobs']}")
 
 
 if __name__ == "__main__":

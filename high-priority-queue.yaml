@@ -4,6 +4,6 @@ metadata:
   name: high-priority-queue
 spec:
   priority: 10
-  slots: 10
+  slots: 3
 status: {}
   

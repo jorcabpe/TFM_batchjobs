@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: job1
+spec:
+  template:
+    spec:
+      containers:
+      - name: job1-container
+        image: busybox
+        command: ["sh", "-c", "echo Job 1; sleep 30"]
+      restartPolicy: Never
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: job2
+spec:
+  template:
+    spec:
+      containers:
+      - name: job2-container
+        image: busybox
+        command: ["sh", "-c", "echo Job 2; sleep 30"]
+      restartPolicy: Never
