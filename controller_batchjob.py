@@ -179,7 +179,7 @@ async def monitor_pod_status(name, labels, status, **kwargs):
                 )
                 return
 
-            logging.info(f"[REMOVING] - Removing Pod: {name}")
+            logging.info(f"[MONITORING][REMOVING] - Removing Pod: {name}")
             # logging.info(f"[REMOVING] - Removing Job: {job_name}\n")
             #logging.info(f"queuedJobs: {queue_status['queuedJobs']}")
             #logging.info(f"runningJobs: {queue_status['runningJobs']}")
@@ -249,7 +249,7 @@ async def delete_batchjob(spec, name, namespace, **kwargs):
             )
             return
 
-        logging.info(f"[REMOVING] - BatchJob {name} removed from queue {queue_name}\n")
+        logging.info(f"[MONITORING][REMOVING] - BatchJob {name} removed from queue {queue_name}\n")
 
 
 @kopf.on.create(GROUP, VERSION, QUEUE_PLURAL)

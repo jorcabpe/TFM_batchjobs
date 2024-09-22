@@ -8,7 +8,7 @@ spec:
   jobDetails:
     image: jorcabpe/mtlinpack-image:latest
     commands:
-      - "/usr/src/mtlinpack.ex2 out.txt 30000"
+      - "/usr/src/mtlinpack.ex2 out.txt 3000"
     resources:
       requests:
         memory: "256Mi"
